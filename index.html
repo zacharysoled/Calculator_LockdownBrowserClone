@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculator</title>
+  <style>
+    :root{
+      --bg:#e7edf3;
+      --panel:#f4f7fa;
+      --border:#c9d3dc;
+      --button:#eef3f7;
+      --button-ghost:#e9eff5;
+      --button-active:#d7e2ec;
+      --text:#2a2f35;
+      --muted:#6e7a86;
+      --focus:#3b82f6;
+      --shadow:0 2px 10px rgba(20,30,40,.15);
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0; background:linear-gradient(180deg,#f6f9fc,#eaf1f7);
+      color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+      display:grid; place-items:center; min-height:100vh;
+    }
+    .window{
+      width: 560px; max-width: 92vw; background:var(--panel); border:1px solid var(--border); border-radius:10px;
+      box-shadow:var(--shadow); overflow:hidden;
+    }
+    .titlebar{padding:.6rem .9rem; font-weight:600; color:#657181; background:linear-gradient(#f7fbff,#ecf1f6); border-bottom:1px solid var(--border);}
+    .calc{
+      display:grid; grid-template-columns: 1fr 140px; gap:12px; padding:14px;
+    }
+    .display-wrap{ grid-column:1 / span 2; display:grid; grid-template-columns: 22px 1fr 140px; align-items:center; gap:10px;}
+    .mem-ind{height:22px; width:22px; border:1px solid var(--border); border-radius:4px; background:var(--bg); display:grid; place-items:center; font-size:.85rem; color:#2f6fb5; font-weight:700;}
+    .mem-ind.empty{color:transparent;}
+    .display{
+      background:#fff; border:1px solid var(--border); border-radius:6px; height:44px; padding:0 .6rem; font-size:26px; display:flex; align-items:center; justify-content:flex-end; letter-spacing:.5px; overflow:hidden;
+    }
+    .side{display:flex; flex-direction:column; gap:10px;}
+    .side .btn{height:44px; font-weight:600;}
+    .keys{display:grid; gap:10px; grid-template-columns: repeat(5, 1fr); grid-auto-rows:48px;}
+    .span-2{grid-column: span 2;}
+    .span-2-rows{grid-row: span 2;}
+    .wide{grid-column: span 2;}
+    .btn{appearance:none; border:1px solid var(--border); background:var(--button); border-radius:6px; cursor:pointer; font-size:16px; color:var(--text); box-shadow: inset 0 -2px 0 rgba(255,255,255,0.6);
+      transition: transform .02s ease, background .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+    .btn:active{ background:var(--button-active); transform:translateY(1px);}
+    .btn.secondary{ background:var(--button-ghost);}
+    .btn.op{ font-weight:700;}
+    .btn:focus{outline:2px solid var(--focus); outline-offset:1px;}
+    .muted{color:var(--muted);}
+    .footer{grid-column:1 / span 2; padding:0 14px 14px;}
+    @media (max-width:640px){
+      .window{width: 96vw}
+      .calc{grid-template-columns: 1fr;}
+      .display-wrap{grid-template-columns: 22px 1fr; grid-column:1;}
+      .side{grid-column:1; flex-direction:row}
+    }
+  </style>
+</head>
+<body>
+  <div class="window" role="application" aria-label="Calculator">
+    <div class="titlebar">Calculator</div>
+    <div class="calc">
+      <div class="display-wrap">
+        <div id="memInd" class="mem-ind empty" aria-hidden="true">M</div>
+        <div id="display" class="display" aria-live="polite" aria-atomic="true">0</div>
+        <div class="side">
+          <button class="btn" id="btnClose" title="Close the window">Close</button>
+          <button class="btn" id="btnCopy" title="Copy value to clipboard">Copy</button>
+        </div>
+      </div>
+
+      <div class="keys" id="keys">
+        <!-- memory row -->
+        <button class="btn secondary" data-action="MC" title="Memory Clear">MC</button>
+        <button class="btn secondary" data-action="MR" title="Memory Recall">MR</button>
+        <button class="btn secondary" data-action="MS" title="Memory Store">MS</button>
+        <button class="btn secondary" data-action="M+" title="Memory Add">M+</button>
+        <button class="btn secondary" data-action="M-" title="Memory Subtract">M-</button>
+
+        <!-- control row -->
+        <button class="btn" data-action="back" title="Backspace">←</button>
+        <button class="btn" data-action="CE" title="Clear Entry">CE</button>
+        <button class="btn" data-action="C" title="Clear">C</button>
+        <button class="btn" data-action="negate" title="Toggle Sign">+/−</button>
+        <button class="btn" data-action="sqrt" title="Square Root">√</button>
+
+        <!-- 7 8 9 / % -->
+        <button class="btn" data-digit="7">7</button>
+        <button class="btn" data-digit="8">8</button>
+        <button class="btn" data-digit="9">9</button>
+        <button class="btn op" data-op="/">/</button>
+        <button class="btn" data-action="percent">%</button>
+
+        <!-- 4 5 6 * 1/x -->
+        <button class="btn" data-digit="4">4</button>
+        <button class="btn" data-digit="5">5</button>
+        <button class="btn" data-digit="6">6</button>
+        <button class="btn op" data-op="*">*</button>
+        <button class="btn" data-action="recip">1/x</button>
+
+        <!-- 1 2 3 -  (= spans 2 rows at the far right) -->
+        <button class="btn" data-digit="1">1</button>
+        <button class="btn" data-digit="2">2</button>
+        <button class="btn" data-digit="3">3</button>
+        <button class="btn op" data-op="-">-</button>
+        <button class="btn op span-2-rows" data-action="equals" aria-label="Equals">=</button>
+
+        <!-- 0 (wide), ., + -->
+        <button class="btn wide" data-digit="0">0</button>
+        <button class="btn" data-digit=".">.</button>
+        <button class="btn op" data-op="+">+</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const displayEl = document.getElementById('display');
+    const keysEl = document.getElementById('keys');
+    const memIndEl = document.getElementById('memInd');
+    const btnCopy = document.getElementById('btnCopy');
+    const btnClose = document.getElementById('btnClose');
+
+    const state = {
+      display: '0',
+      firstOperand: null,
+      operator: null,
+      waitingForSecond: false,
+      memory: 0,
+      error: false
+    };
+
+    function updateDisplay(text){
+      displayEl.textContent = text ?? state.display;
+    }
+    function setDisplay(val){
+      state.display = String(val);
+      updateDisplay();
+    }
+    function setMemoryIndicator(){
+      memIndEl.classList.toggle('empty', !(state.memory !== 0));
+    }
+    function inputDigit(d){
+      if(state.error){return}
+      if(d === '.'){
+        if(state.waitingForSecond){
+          state.display = '0.';
+          state.waitingForSecond = false;
+        } else if(!state.display.includes('.')){
+          state.display += '.';
+        }
+        updateDisplay();
+        return;
+      }
+      if(state.waitingForSecond){
+        state.display = d;
+        state.waitingForSecond = false;
+      } else {
+        state.display = (state.display === '0') ? d : state.display + d;
+      }
+      updateDisplay();
+    }
+    function backspace(){
+      if(state.error){return}
+      if(state.waitingForSecond){return}
+      state.display = state.display.length > 1 ? state.display.slice(0,-1) : '0';
+      updateDisplay();
+    }
+    function clearEntry(){ if(state.error){ state.error=false; } state.display = '0'; state.waitingForSecond = false; updateDisplay(); }
+    function clearAll(){ state.display='0'; state.firstOperand=null; state.operator=null; state.waitingForSecond=false; state.error=false; updateDisplay(); }
+    function toggleSign(){ if(state.error){return} if(state.display==='0')return; setDisplay(state.display.startsWith('-')?state.display.slice(1):'-'+state.display); }
+    function asNumber(v){ const n = Number(v); return Number.isFinite(n)?n:0; }
+    function doOp(op,a,b){
+      switch(op){
+        case '+': return a+b;
+        case '-': return a-b;
+        case '*': return a*b;
+        case '/': if(b===0){throw new Error('Cannot divide by zero');} return a/b;
+        default: return b;
+      }
+    }
+    function handleOperator(nextOp){
+      if(state.error){return}
+      const inputValue = asNumber(state.display);
+      if(state.firstOperand===null){ state.firstOperand=inputValue; }
+      else if(!state.waitingForSecond){
+        try{
+          const result=doOp(state.operator,state.firstOperand,inputValue);
+          state.firstOperand=result; setDisplay(result);
+        }catch(e){ setDisplay(e.message); state.error=true; return; }
+      }
+      state.operator=nextOp; state.waitingForSecond=true;
+    }
+    function equals(){
+      if(state.error){return}
+      const inputValue = asNumber(state.display);
+      if(state.operator===null){return;}
+      try{
+        const result=doOp(state.operator,state.firstOperand??0,inputValue);
+        setDisplay(result); state.firstOperand=null; state.operator=null; state.waitingForSecond=false;
+      }catch(e){ setDisplay(e.message); state.error=true; }
+    }
+    function sqrt(){ if(state.error){return} const v=asNumber(state.display); if(v<0){setDisplay('Invalid input');state.error=true;return;} setDisplay(Math.sqrt(v)); state.waitingForSecond=false; }
+    function recip(){ if(state.error){return} const v=asNumber(state.display); if(v===0){setDisplay('Cannot divide by zero');state.error=true;return;} setDisplay(1/v); state.waitingForSecond=false; }
+    function percent(){ if(state.error){return} let v=asNumber(state.display); if(state.firstOperand!==null&&state.operator){v=state.firstOperand*(v/100);} else {v=v/100;} setDisplay(v); }
+
+    // Memory
+    function memStore(){ state.memory=asNumber(state.display); setMemoryIndicator(); }
+    function memClear(){ state.memory=0; setMemoryIndicator(); }
+    function memRecall(){ setDisplay(state.memory); state.waitingForSecond=false; state.error=false; }
+    function memPlus(){ state.memory+=asNumber(state.display); setMemoryIndicator(); }
+    function memMinus(){ state.memory-=asNumber(state.display); setMemoryIndicator(); }
+
+    keysEl.addEventListener('click',(e)=>{
+      const btn=e.target.closest('button'); if(!btn)return;
+      const d=btn.getAttribute('data-digit'); const op=btn.getAttribute('data-op'); const act=btn.getAttribute('data-action');
+      if(d!=null){inputDigit(d);return;} if(op){handleOperator(op);return;}
+      switch(act){
+        case 'equals':equals();break; case 'sqrt':sqrt();break; case 'recip':recip();break;
+        case 'percent':percent();break; case 'negate':toggleSign();break; case 'back':backspace();break;
+        case 'CE':clearEntry();break; case 'C':clearAll();break;
+        case 'MC':memClear();break; case 'MR':memRecall();break;
+        case 'MS':memStore();break; case 'M+':memPlus();break; case 'M-':memMinus();break;
+      }
+    });
+
+    window.addEventListener('keydown',(e)=>{
+      if((e.key>='0'&&e.key<='9')){inputDigit(e.key);return;}
+      if(e.key==='.') inputDigit('.');
+      if(['+','-','*','/'].includes(e.key)){handleOperator(e.key);return;}
+      if(e.key==='Enter'||e.key==='='){equals();e.preventDefault();return;}
+      if(e.key==='Backspace'){backspace();return;}
+      if(e.key==='Escape'){clearAll();return;}
+      if(e.key==='%'){percent();return;}
+    });
+
+    btnCopy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(String(state.display));btnCopy.textContent='Copied';setTimeout(()=>btnCopy.textContent='Copy',900);}catch{}});
+    btnClose.addEventListener('click',()=>{const closed=window.close();document.querySelector('.window').style.display='none';});
+    setMemoryIndicator(); updateDisplay('0');
+  })();
+  </script>
+</body>
+</html>
